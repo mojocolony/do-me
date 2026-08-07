@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1ea">
+  <title>Do Me</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">TASKS</div>
+        <h1>Do Me</h1>
+        <div id="syncStatus" class="sync-status">Saved on this device</div>
+      </div>
+      <div class="top-actions">
+        <button id="settingsBtn" class="icon-btn" aria-label="Settings" title="Settings">⚙</button>
+        <button id="addTaskBtn" class="primary-btn" title="Add task (Q)">+ Add Task <span class="shortcut-key">Q</span></button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar" aria-label="Lists and folders">
+        <div class="sidebar-section smart-section">
+          <button class="nav-row active" data-view="inbox">
+            <span class="nav-label"><span class="nav-icon">⌂</span>Inbox</span>
+            <span id="countInbox" class="count-pill">0</span>
+          </button>
+          <button class="nav-row" data-view="today">
+            <span class="nav-label"><span class="nav-icon">☀</span>Today</span>
+            <span id="countToday" class="count-pill">0</span>
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-heading-row">
+            <div class="sidebar-heading">LISTS</div>
+            <div class="sidebar-heading-actions">
+              <button id="addListBtn" class="mini-btn" type="button">+ List</button>
+              <button id="addFolderBtn" class="mini-btn" type="button">+ Folder</button>
+            </div>
+          </div>
+          <div id="listTree" class="list-tree"></div>
+          <div id="noListsHint" class="sidebar-hint">Create lists for whatever matters to you, then group them into folders or projects if useful.</div>
+        </div>
+
+        <div class="sidebar-section archive-section">
+          <button class="nav-row" data-view="completed">
+            <span class="nav-label"><span class="nav-icon">✓</span>Completed</span>
+            <span id="countCompleted" class="count-pill">0</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="content-panel">
+        <section class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+            <input id="searchInput" type="search" placeholder="Search this list or tags" autocomplete="off">
+          </div>
+          <select id="tagFilter" aria-label="Filter by tag">
+            <option value="">All tags</option>
+          </select>
+        </section>
+
+        <section class="view-header">
+          <div>
+            <h2 id="viewTitle">Inbox</h2>
+            <p id="viewSubtitle">Things you’ve captured but haven’t filed yet.</p>
+          </div>
+          <button id="editCurrentListBtn" class="secondary-btn compact" type="button" hidden>Edit list</button>
+        </section>
+
+        <div id="taskList" class="task-list" aria-live="polite"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <div class="empty-mark">✓</div>
+          <h3 id="emptyTitle">Nothing here.</h3>
+          <p id="emptyText">Add a task when something comes to mind.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="quickAddDialog" class="quick-add-modal">
+    <div class="quick-add-body">
+      <div class="eyebrow">QUICK ADD · INBOX</div>
+      <input id="quickAddTitle" type="text" placeholder="What needs doing?" autocomplete="off" aria-label="Quick add task to Inbox">
+      <div class="quick-add-footer">
+        <span>Enter to save · Esc to cancel</span>
+        <button id="quickAddMoreBtn" class="secondary-btn compact" type="button">More details</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="taskDialog" class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">TASK</div>
+        <h2 id="taskDialogTitle">Add Task</h2>
+      </div>
+      <button id="taskCloseBtn" class="icon-btn large" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="modal-body">
+      <label>Task
+        <input id="taskTitle" type="text" placeholder="What needs doing?" autocomplete="off">
+      </label>
+
+      <div class="two-col">
+        <label>List
+          <select id="taskListSelect"></select>
+        </label>
+        <label>Priority
+          <select id="taskPriority">
+            <option value="">None</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="today-toggle">
+        <input id="taskToday" type="checkbox">
+        <span>
+          <strong>Show in Today</strong>
+          <small>Today is a focus view. The task stays in its list as well.</small>
+        </span>
+      </label>
+
+      <label>Due date
+        <input id="taskDue" type="date">
+      </label>
+
+      <label>Tags
+        <input id="taskTags" type="text" placeholder="home, errands, school">
+        <small>Separate tags with commas.</small>
+      </label>
+
+      <label>Notes
+        <textarea id="taskNotes" rows="5" placeholder="Optional details"></textarea>
+      </label>
+
+      <div id="taskError" class="inline-status error" hidden></div>
+    </div>
+
+    <div class="modal-actions">
+      <div class="left-actions">
+        <button id="deleteTaskBtn" class="danger-link" type="button" hidden>Delete</button>
+      </div>
+      <div class="right-actions">
+        <button id="taskCancelBtn" class="secondary-btn" type="button">Cancel</button>
+        <button id="taskSaveBtn" class="primary-btn" type="button">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="listDialog" class="modal small-modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">LIST</div>
+        <h2 id="listDialogTitle">New List</h2>
+      </div>
+      <button id="listCloseBtn" class="icon-btn large" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <label>List name
+        <input id="listName" type="text" placeholder="Errands" autocomplete="off">
+      </label>
+      <label>Folder / project
+        <select id="listFolderSelect"></select>
+        <small>Optional. Folders are just containers for grouping related lists.</small>
+      </label>
+      <div id="listError" class="inline-status error" hidden></div>
+    </div>
+    <div class="modal-actions">
+      <button id="deleteListBtn" class="danger-link" type="button" hidden>Delete list</button>
+      <div class="right-actions">
+        <button id="listCancelBtn" class="secondary-btn" type="button">Cancel</button>
+        <button id="listSaveBtn" class="primary-btn" type="button">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="folderDialog" class="modal small-modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">FOLDER / PROJECT</div>
+        <h2 id="folderDialogTitle">New Folder</h2>
+      </div>
+      <button id="folderCloseBtn" class="icon-btn large" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <label>Name
+        <input id="folderName" type="text" placeholder="Home" autocomplete="off">
+      </label>
+      <p class="helper-copy">Use these however you like: folders, project areas, parts of your life, or broader categories.</p>
+      <div id="folderError" class="inline-status error" hidden></div>
+    </div>
+    <div class="modal-actions">
+      <button id="deleteFolderBtn" class="danger-link" type="button" hidden>Delete folder</button>
+      <div class="right-actions">
+        <button id="folderCancelBtn" class="secondary-btn" type="button">Cancel</button>
+        <button id="folderSaveBtn" class="primary-btn" type="button">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="settingsDialog" class="modal settings-modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">SETTINGS</div>
+        <h2>Settings</h2>
+      </div>
+      <button id="settingsCloseBtn" class="icon-btn large" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="modal-body">
+      <section class="settings-section">
+        <h3>Dropbox Sync</h3>
+        <p>Optional. Reuse the same Dropbox app you already created for your other personal apps.</p>
+        <label>Dropbox App Key
+          <input id="dropboxKey" type="text" autocomplete="off" placeholder="Paste App key">
+        </label>
+        <div class="button-row">
+          <button id="connectDropboxBtn" class="primary-btn" type="button">Connect Dropbox</button>
+          <button id="disconnectDropboxBtn" class="secondary-btn" type="button" hidden>Disconnect</button>
+        </div>
+        <div id="dropboxStatus" class="inline-status"></div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Backup</h3>
+        <p>Export everything as JSON or restore a previous backup.</p>
+        <div class="button-row">
+          <button id="exportBtn" class="secondary-btn" type="button">Export backup</button>
+          <label class="secondary-btn file-btn">Import backup<input id="importInput" type="file" accept="application/json,.json"></label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Keyboard</h3>
+        <p>Press <strong>Q</strong> anywhere in the app (when you are not already typing) to quick-add a task straight to Inbox. Press Enter to save or Esc to cancel.</p>
+      </section>
+
+      <section class="settings-section">
+        <h3>How Today works</h3>
+        <p><strong>Inbox</strong> is where unfiled tasks live. Custom lists can be grouped inside folders/projects. <strong>Today</strong> is a separate focus view: marking a task for Today does not remove it from its normal list.</p>
+      </section>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
